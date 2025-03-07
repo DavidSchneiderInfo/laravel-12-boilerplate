@@ -1,0 +1,85 @@
+services:
+    web:
+        image: nginx:latest
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        volumes:
+            - '.:/var/www/html'
+            - './docker/nginx/server.conf:/etc/nginx/conf.d/default.conf'
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        depends_on:
+            - php-fpm
+    php-fpm:
+        build:
+            context: .
+            dockerfile: ./docker/php/Dockerfile
+        volumes:
+            - .:/var/www/html
+            - ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+            - ./docker/php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+    mysql:
+        image: 'mysql:8.3.0'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD:-password}'
+            MYSQL_ROOT_HOST: '%'
+        volumes:
+            - 'appbuild-mysql:/var/lib/mysql'
+            - './docker/mysql/init:/docker-entrypoint-initdb.d'
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-p${DB_PASSWORD}'
+            retries: 10
+            timeout: 6s
+    redis:
+        image: 'redis:alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        volumes:
+            - 'appbuild-redis:/data'
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+    mailpit:
+        image: 'axllent/mailpit:latest'
+        ports:
+            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+    composer:
+        image: composer/composer
+        init: false
+        volumes:
+            - ".:/composer"
+        working_dir: /composer
+        command: composer install
+    node:
+        image: node:latest
+        init: false
+        volumes:
+            - ".:/node"
+        working_dir: /node
+        command: npm install
+volumes:
+    appbuild-mysql:
+        driver: local
+    appbuild-redis:
+        driver: local
+    appbuild-meilisearch:
+        driver: local
