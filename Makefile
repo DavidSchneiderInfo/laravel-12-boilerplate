@@ -2,7 +2,7 @@ all: build dep-install node-build up
 
 # Container management
 up:
-	docker compose up -d
+	docker compose up -d --remove-orphans
 
 down:
 	docker compose down
@@ -44,6 +44,5 @@ mysql-cli:
 	docker compose exec mysql mysql -u root -ppassword -h mysql
 
 # Testing
-phpunit: up
+phpunit:
 	docker compose exec -ti php-fpm php artisan test
-
