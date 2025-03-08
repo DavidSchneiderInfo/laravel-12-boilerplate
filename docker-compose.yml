@@ -19,7 +19,7 @@ services:
             dockerfile: ./docker/php/Dockerfile
         volumes:
             - .:/var/www/html
-            - ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+            #- ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
             - ./docker/php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
         extra_hosts:
             - 'host.docker.internal:host-gateway'
@@ -65,14 +65,13 @@ services:
             - '${FORWARD_MAILPIT_PORT:-1025}:1025'
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
     composer:
-        image: composer/composer
+        image: composer:2.8.6
         init: false
         volumes:
-            - ".:/composer"
-        working_dir: /composer
-        command: composer install
+            - ".:/app"
+        command: bash -c "git config --global --add safe.directory /app && composer install"
     node:
-        image: node:latest
+        image: node:alpine3.20
         init: false
         volumes:
             - ".:/node"
